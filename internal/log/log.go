@@ -179,5 +179,21 @@ func (l *Log) Reader() io.Reader {
 	defer l.mu.RUnlock()
 
 	readers := make([]io.Reader, len(l.segments))
-	for i, segment := range l.segments {}
+	for i, segment := range l.segments {
+		readers[i] = &originReader{segment.store, 0}
+	}
+
+	return io.MultiReader(readers...)
+}
+
+type originReader struct {
+	*store
+	off int64
+}
+
+func (o *originReader) Read(p []byte) (int, error) {
+	n, err := o.ReadAt(p, o.off)
+	o.off += int64(n)
+
+	return n, err
 }
