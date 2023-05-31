@@ -72,10 +72,10 @@ func (l *Log) setup() error {
 	return nil
 }
 
-func (l *Log) Append(record api.Record) (uint64, error) {
+func (l *Log) Append(record *api.Record) (uint64, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	off, err := l.activeSegment.Append(&record)
+	off, err := l.activeSegment.Append(record)
 	if err != nil {
 		return 0, err
 	}
