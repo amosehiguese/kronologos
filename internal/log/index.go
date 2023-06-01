@@ -82,6 +82,10 @@ func (i *index) Close() error {
 		return err
 	}
 
+	if err := i.mmap.UnsafeUnmap(); err != nil {
+		return err
+	}
+
 	if err := i.file.Sync(); err != nil {
 		return err
 	}
