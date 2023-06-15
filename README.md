@@ -1,2 +1,2 @@
-## Commit Log
-This is a distributed commit log written in go.
+## Kronologos
+Kronologos is a distributed commit log written in go.
