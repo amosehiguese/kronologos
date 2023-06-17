@@ -21,12 +21,10 @@ gencert:
 	cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=test/ca-config.json -profile=client -cn="nobody" test/client-csr.json | cfssljson -bare nobody-client
 
 .PHONY: test
-test:
-	$(CONFIG_PATH)/policy.csv $(CONFIG_PATH)/model.conf
+test: $(CONFIG_PATH)/model.conf $(CONFIG_PATH)/policy.csv
 	go test -v -cover -race ./internal/server/server_test.go
 
 
 .PHONY: compile
 compile:
 	protoc api/v1/*.proto --go_out=. --go-grpc_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --proto_path=.
-

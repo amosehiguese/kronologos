@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	api "github.com/amosehiguese/proglog/api/v1"
+	"github.com/amosehiguese/proglog/internal/auth"
 	"github.com/amosehiguese/proglog/internal/config"
 	"github.com/amosehiguese/proglog/internal/log"
 	"github.com/stretchr/testify/require"
@@ -80,13 +81,18 @@ func setupTest(t *testing.T, fn func(*Config)) (rootClient api.LogClient, nobody
 
 	dir, err := os.MkdirTemp("", "server-test")
 	require.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	clog, err := log.NewLog(dir, log.Config{})
 	require.NoError(t, err)
 
+	authorizer := auth.New(config.ACLModelFile, config.ACLPolicyFile)
+
 	cfg = &Config{
 		CommitLog: clog,
+		Authorizer: authorizer,
 	}
+
 	if fn != nil {
 		fn(cfg)
 	}
@@ -208,6 +214,7 @@ func testProduceConsumeStream(t *testing.T, client api.LogClient, _ api.LogClien
 
 func testUnauthorized(t *testing.T, _, client api.LogClient, config *Config) {
 	ctx := context.Background()
+	
 	produce, err := client.Produce(ctx, &api.ProduceRequest{
 		Record: &api.Record{
 			Value: []byte("hello world"),
