@@ -1,5 +1,11 @@
 CONFIG_PATH=${HOME}/.proglog/
 
+$(CONFIG_PATH)/model.conf:
+	cp test/model.conf $(CONFIG_PATH)/model.conf
+
+$(CONFIG_PATH)/policy.csv:
+	cp test/policy.csv $(CONFIG_PATH)/policy.csv
+
 .PHONY: init
 init:
 	mkdir -p ${CONFIG_PATH}
@@ -16,6 +22,7 @@ gencert:
 
 .PHONY: test
 test:
+	$(CONFIG_PATH)/policy.csv $(CONFIG_PATH)/model.conf
 	go test -v -cover -race ./internal/server/server_test.go
 
 
