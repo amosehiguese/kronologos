@@ -1,5 +1,10 @@
 package log
 
+import (
+	"os"
+	"path/filepath"
+)
+
 type DistributedLog struct {
 	config Config
 	log    *Log
@@ -17,4 +22,16 @@ func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
 	}
 
 	return l, nil
+}
+
+func (l *DistributedLog) setupLog(dataDir string) error {
+	logDir := filepath.Join(dataDir, "log")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return err
+	}
+
+	var err error
+	l.log, err = NewLog(logDir, l.config)
+
+	return err
 }
