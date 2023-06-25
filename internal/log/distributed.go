@@ -6,9 +6,9 @@ import (
 )
 
 type DistributedLog struct {
-	config Config
-	log    *Log
-	raft   *raft.Raft
+	config 		Config
+	log    		*Log
+	raft  		*raft.Raft
 }
 
 func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
