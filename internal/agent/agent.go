@@ -7,10 +7,13 @@ import (
 	"sync"
 
 	api "github.com/amosehiguese/proglog/api/v1"
+
 	"github.com/amosehiguese/proglog/internal/auth"
 	"github.com/amosehiguese/proglog/internal/discovery"
 	"github.com/amosehiguese/proglog/internal/log"
 	"github.com/amosehiguese/proglog/internal/server"
+
+	"github.com/soheilhy/cmux"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -19,14 +22,14 @@ import (
 type Agent struct {
 	Config 
 
-	log  					*log.Log
+	mux					cmux.CMux
+	log  				*log.DistributedLog
 	server  			*grpc.Server
-	membership 		*discovery.Membership
-	replicator 		*log.Replicator
+	membership 			*discovery.Membership
 
 	shutdown 			bool
-	shutdowns 		chan struct{}
-	shutdownLock  sync.Mutex
+	shutdowns 			chan struct{}
+	shutdownLock  		sync.Mutex
 }
 
 type Config struct {
@@ -39,6 +42,8 @@ type Config struct {
 	StartJoinAddrs 				[]string
 	ACLModelFile  				string
 	ACLPolicyFile  				string
+	Bootstrap			bool
+
 }
 
 func (c Config) RPCAddr() (string, error) {
@@ -57,6 +62,7 @@ func New(config Config) (*Agent, error) {
 	}
 	setup := []func() error {
 		a.setupLogger,
+		a.setupMux,
 		a.setupLog,
 		a.setupServer,
 		a.setupMembership,
@@ -69,6 +75,17 @@ func New(config Config) (*Agent, error) {
 	}
 
 	return a, nil
+}
+
+func (a *Agent) setupMux() error {
+	rpcAddr := fmt.Sprintf(":%d", a.Config.RPCPort)
+	ln, err := net.Listen("tcp", rpcAddr)
+	if err != nil {
+		return err
+	}
+	a.mux = cmux.New(ln)
+
+	return nil
 }
 
 func (a *Agent) setupLogger() error {
