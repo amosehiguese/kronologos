@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	api "github.com/amosehiguese/proglog/api/v1"
 	"github.com/hashicorp/raft"
 
 	"github.com/amosehiguese/proglog/internal/auth"
@@ -77,6 +76,7 @@ func New(config Config) (*Agent, error) {
 			return nil, err
 		}
 	}
+	go a.serve()
 
 	return a, nil
 }
@@ -143,19 +143,9 @@ func (a *Agent) setupServer() error {
 	if err != nil {
 		return err
 	}
-
-	rpcAddr, err := a.RPCAddr()
-	if err != nil {
-		return err
-	}
-
-	ln, err := net.Listen("tcp", rpcAddr)
-	if err != nil {
-		return err
-	}
-
+	grpcLn := a.mux.Match(cmux.Any())
 	go func() {
-		if err := a.server.Serve(ln); err != nil {
+		if err := a.server.Serve(grpcLn); err != nil {
 			_ = a.Shutdown()
 		}
 	}()
@@ -169,21 +159,7 @@ func (a *Agent) setupMembership() error {
 		return err
 	}
 
-	var opts []grpc.DialOption
-	if a.Config.PeerTLSConfig != nil {
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(a.Config.PeerTLSConfig)))
-	}
-
-	conn, err := grpc.Dial(rpcAddr, opts...)
-	if err != nil {
-		return err
-	}
-
-	client := api.NewLogClient(conn)
-
-	a.replicator = &log.Replicator{DialOptions: opts, LocalServer: client}
-
-	a.membership, err = discovery.New(a.replicator, discovery.Config{
+	a.membership, err = discovery.New(a.log, discovery.Config{
 		NodeName: a.Config.NodeName,
 		BindAddr: a.Config.BindAddr,
 		Tags: map[string]string{
@@ -208,7 +184,6 @@ func (a *Agent) Shutdown() error {
 
 	shutdown := []func() error {
 		a.membership.Leave,
-		a.replicator.Close,
 		func() error {
 			a.server.GracefulStop()
 			return nil
@@ -220,6 +195,15 @@ func (a *Agent) Shutdown() error {
 		if err := fn(); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (a *Agent) serve() error {
+	if err := a.mux.Serve(); err != nil {
+		_ = a.Shutdown()
+		return err
 	}
 
 	return nil
