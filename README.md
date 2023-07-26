@@ -1,3 +1,3 @@
 ## Kronologos
 
-Kronologos is a distributed commit log written in go.
+Kronologos is a distributed commit log written in Go.
