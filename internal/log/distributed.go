@@ -79,11 +79,11 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	}
 
 	maxPool := 5
-	timeout := 10 * time.Second 
+	timeout := 10 * time.Second
 	transport := raft.NewNetworkTransport(
-		l.config.Raft.StreamLayer, 
-		maxPool, 
-		timeout, 
+		l.config.Raft.StreamLayer,
+		maxPool,
+		timeout,
 		os.Stderr,
 	)
 
@@ -104,10 +104,10 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 
 	l.raft, err = raft.NewRaft(
 		config,
-		fsm, 
+		fsm,
 		logStore,
 		stableStore,
-		snapshotStore, 
+		snapshotStore,
 		transport,
 	)
 	if err != nil {
@@ -115,8 +115,8 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	}
 
 	hasState, err := raft.HasExistingState(
-		logStore, 
-		stableStore, 
+		logStore,
+		stableStore,
 		snapshotStore,
 	)
 	if err != nil {
@@ -132,7 +132,7 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 		}
 		err = l.raft.BootstrapCluster(config).Error()
 	}
-	
+
 	return err
 }
 
@@ -149,7 +149,7 @@ func (l *DistributedLog) Append(record *api.Record) (uint64, error) {
 }
 
 func (l *DistributedLog) apply(reqType RequestType, req proto.Message) (interface{}, error) {
-	var buf bytes.Buffer 
+	var buf bytes.Buffer
 	_, err := buf.Write([]byte{byte(reqType)})
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (l *DistributedLog) Join(id, addr string) error {
 			if srv.ID == serverID && srv.Address == serverAddr {
 				return nil
 			}
-	
+
 			removeFuture := l.raft.RemoveServer(serverID, 0, 0)
 			if err := removeFuture.Error(); err != nil {
 				return err
@@ -245,6 +245,23 @@ func (l *DistributedLog) Close() error {
 	return l.log.Close()
 }
 
+func (l *DistributedLog) GetServers() ([]*api.Server, error) {
+	future := l.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		return nil, err
+	}
+
+	var servers []*api.Server
+	for _, server := range future.Configuration().Servers {
+		servers = append(servers, &api.Server{
+			Id: string(server.ID),
+			RpcAddr: string(server.Address),
+			IsLeader: l.raft.Leader() == server.Address,
+		})
+	}
+	return servers, nil
+}
+
 var _ raft.FSM = (*fsm)(nil)
 
 type fsm struct {
@@ -285,7 +302,7 @@ func (l *fsm) applyAppend(b []byte) interface{} {
 
 func (f *fsm) Snapshot() (raft.FSMSnapshot, error)  {
 	r := f.log.Reader()
-	
+
 	return &snapshot{reader: r}, nil
 }
 
