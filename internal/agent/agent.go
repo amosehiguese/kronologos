@@ -23,7 +23,7 @@ import (
 )
 
 type Agent struct {
-	Config 
+	Config
 
 	mux					cmux.CMux
 	log  				*log.DistributedLog
@@ -130,7 +130,7 @@ func (a *Agent) setupLog() error {
 
 func (a *Agent) setupServer() error {
 	authorizer := auth.New(a.Config.ACLModelFile, a.Config.ACLPolicyFile)
-	serverConfig := &server.Config{CommitLog: a.log, Authorizer: authorizer}
+	serverConfig := &server.Config{CommitLog: a.log, Authorizer: authorizer, GetServerer: a.log}
 
 	var opts []grpc.ServerOption
 	if a.Config.ServerTLSConfig != nil {
@@ -138,7 +138,7 @@ func (a *Agent) setupServer() error {
 		opts = append(opts, grpc.Creds(creds))
 	}
 
-	var err error 
+	var err error
 	a.server, err = server.NewGRPCServer(serverConfig, opts...)
 	if err != nil {
 		return err
