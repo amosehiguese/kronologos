@@ -37,6 +37,20 @@ func TestPickerProducesToLeader(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
+		gotPick, err := picker.Pick(info)
+		require.NoError(t, err)
+		require.Equal(t, subConns[0], gotPick.SubConn)
+	}
+}
+
+// TestPickerConsumesFromFollowers() tests that the picker picks the followers subconnections in a round-robin for consume calls
+func TestPickerConsumesFromFollowers(t *testing.T) {
+	picker, subConns := setupTest()
+	info := balancer.PickInfo{
+		FullMethodName: "/log.vX.Log/Consume",
+	}
+
+	for i := 0; i < 5; i++ {
 		pick, err := picker.Pick(info)
 		require.NoError(t, err)
 		require.Equal(t, subConns[i%2+1], pick.SubConn)
