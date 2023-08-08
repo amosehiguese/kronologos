@@ -4,4 +4,5 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /go/bin/kronologos ./cmd/kronologos
 
 FROM scratch
-COPY --from=build /go
+COPY --from=build /go/bin/kronologos /bin/kronologos
+ENTRYPOINT ["/bin/kronologos"]
