@@ -28,3 +28,9 @@ test: $(CONFIG_PATH)/model.conf $(CONFIG_PATH)/policy.csv
 .PHONY: compile
 compile:
 	protoc api/v1/*.proto --go_out=. --go-grpc_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --proto_path=.
+
+
+TAG ?= 0.0.1
+
+build-docker:
+	docker build -t github.com/amosehiguese/kronologos:$(TAG) .
