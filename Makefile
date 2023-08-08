@@ -1,4 +1,4 @@
-CONFIG_PATH=${HOME}/.proglog/
+CONFIG_PATH=${HOME}/.kronologos/
 
 $(CONFIG_PATH)/model.conf:
 	cp test/model.conf $(CONFIG_PATH)/model.conf
@@ -22,7 +22,7 @@ gencert:
 
 .PHONY: test
 test: $(CONFIG_PATH)/model.conf $(CONFIG_PATH)/policy.csv
-	go test -v -cover -race ./internal/server/server_test.go
+	go test -race ./...
 
 
 .PHONY: compile
@@ -33,4 +33,4 @@ compile:
 TAG ?= 0.0.1
 
 build-docker:
-	docker build -t github.com/amosehiguese/kronologos:$(TAG) .
+	docker build -t amosehiguese/kronologos:$(TAG) .
