@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+	name: {{ include "kronologos.fullname" . }}
+	namespace: {{ .Release.Namespace }}
+	labels: {{ include "kronologos.labels" . | nindent 4}}
+spec:
+	selector:
+		matchlabels: {{ include "kronologos.selectorLabels" . | nindent 6}}
+	serviceName: {{ include "kronologos.fullname" . }}
+	replicas: {{ .Values.replicas }}
+	template:
+		metadata:
+			name: {{ include "kronologos.fullname" . }}
+			labels: {{ include "kronologos.labels" . | nindent 8}}
+		spec:
+			initContainer:
+				- name: {{ include "kronologos.fullname" .}}-config-init
+				image: busybox
+				imagePullPolicy: IfNotPresent
+				command:
+					- /bin/sh
+					- -c
+					- |-
+						ID=$(echo $HOSTNAME | rev | cut -d- -f1 | rev)
+						cat > /var/run/kronologos/config.yaml <<EOD
+						data-dir: /var/run/kronologos/data
+						rpc-port: {{.Values.rpcPort}}
+						bind-addr: "$HOSTNAME.kronologos.{{.Release.Namespacae}}.\svc.cluster.local:{{.Values.serfPort}}"
+						bootstrap: $([ $ID = 0 ] && echo true || echo false)
+						$([ $ID != 0 ] && echo 'start-join-addrs:"kronologos-0.kronologos.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
+						EOD
+				volumeMounts:
+					- name: datadir
+						mountPath: /var/run/kronologos
+			containers:
+				- name: {{ include "kronologos.fullname" . }}
+					image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+					ports:
+						- containerPort: {{ .Values.rpcPort }}
+							name: rpc
+						- containerPort: {{ .Values.serfPort }}
+							name: serf
+					args:
+						- --config-file=/var/run/kronologos/config.yaml
+				volumeMounts:
+					- name: datadir
+						mountPath: /var/run/kronologos
+	volumeClaimTemplates:
+		- metadata:
+				name: datadir
+			spec:
+				accessModes: [ "ReadWriteOnce" ]
+				resources:
+					requests:
+						storage: {{ .Values.storage }}
